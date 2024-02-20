@@ -1,4 +1,4 @@
-interface Transaction {
+export interface TransactionUTXO {
     txid: string;
     fees: number;
     confirmed: string;
