@@ -5,12 +5,7 @@ export interface Address {
     coin: string;
 }
 
-export class AddressLink {
+export interface AddressLink {
     addressA: Address;
     addressB: Address;
-
-    constructor(addressA: Address, addressB: Address) {
-        this.addressA = addressA;
-        this.addressB = addressB;
-    }
 }

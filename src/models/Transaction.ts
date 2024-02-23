@@ -2,7 +2,7 @@ import { TransactionTransfer } from "./TransactionOperation";
 
 export interface Transaction {
     id: string;
-    fees: number;
+    fees?: number;
     confirmed: string;
     blockHeight: number;
     timestamp: number;

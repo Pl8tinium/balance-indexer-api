@@ -3,6 +3,7 @@ import { IExplorerDataSupplicant } from "../interfaces/IExplorerDataSupplicant";
 import { Collection } from "mongodb";
 import { Transaction } from '../models/Transaction';
 
+// this adapter fetches btc data
 export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
     coin: string = 'btc';
     btcRawData: Collection<Transaction>;
@@ -42,6 +43,9 @@ export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
     async verifyFullState(): Promise<string[]> {
         const hardcodedAddresses = ['bc1q5kvdu35dhjgm0v5zp8vgeq0ysr8ql4enusejpa'];
         const addresses = hardcodedAddresses;
+
+
+        // get indexed accounts
 
         const addressesToUpdate: string[] = [];
 

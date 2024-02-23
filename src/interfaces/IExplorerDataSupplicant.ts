@@ -12,7 +12,7 @@ export interface IExplorerDataSupplicant {
      * @returns {Promise<void>}
      */
     updateState(addresses: Array<string>): Promise<void>;
-
+    
     coin: string;
 
     // pla: optimization for the future. When an api call comes in and we do state updates in regular intervals

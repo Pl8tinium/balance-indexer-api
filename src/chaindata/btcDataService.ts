@@ -7,7 +7,7 @@ import { AggregatedAccountBalance } from "../models/AggregatedAccountBalance"
 import { IndexService } from "../indexService"
 
 // basically pipes through values, from a simple btc tx we cannot simply infer relationships to other chains
-export class BtcDatasService implements IDataService {
+export class BtcDataService implements IDataService {
     btcRawData: Collection<Transaction>
     btcIndexData: Collection<IndexedAccount>
     apiAdapter: IExplorerDataSupplicant
