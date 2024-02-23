@@ -1,8 +1,12 @@
 
 import axios from "axios";
 import { indexerApi } from "./api";
-import { AdapterController } from "./api_adapters/adapterController";
-import { TransactionUTXO } from "./models/TransactionUTXO";
+import { AdapterController } from "./apiAdapters/adapterController";
+import { TransactionUTXO } from "./models/Transaction";
+
+
+const client = new MongoClient(connectionString, { useUnifiedTopology: true });
+await client.connect();
 
 // start blockchain explorer adapters
 // const adapterController = new AdapterController();
@@ -12,6 +16,14 @@ import { TransactionUTXO } from "./models/TransactionUTXO";
 // indexerApi.listen(PORT, () => {
 //     console.log(`Server is running on http://localhost:${PORT}`);
 // });
+
+
+
+
+
+// NOTE HARDCODE VSC ACCOUNTS IN FOR NOW TO STARTUP THE WHOLE THING
+
+// ANOTHER NOTE, JUST HARDCODE BTC ACCS IN FOR NOW TO TEST THE API WORKFLOW, THEN TAKE CARE OF OTHER CHAINS
 
 
 

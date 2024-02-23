@@ -4,6 +4,7 @@ const app = express();
 
 app.use(express.json());
 
+// returns raw tx data for a given txid + coin
 app.get('/api/getTx', (req, res) => {
     res.json({ message: 'This is a GET request response' });
 });
