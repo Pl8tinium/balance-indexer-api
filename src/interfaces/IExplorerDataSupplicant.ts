@@ -1,9 +1,11 @@
+import { IndexedAccount } from "../models/IndexedAccount";
+
 export interface IExplorerDataSupplicant {
     /**
-     * go through all indexed accounts and check if the database state correctly indexes the latest txs
+     * go through supplied (indexed) accounts and check if the database state correctly indexes the latest txs
      * @returns {Array<string>} account addresses that are not up to date
      */
-    verifyFullState(): Promise<Array<string>>;
+    verifyFullState(indexedAccounts: Array<IndexedAccount>): Promise<Array<string>>;
 
     /**
      * go through supplied accounts and update the database state to the latest txs

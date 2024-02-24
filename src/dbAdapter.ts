@@ -1,5 +1,7 @@
 // databases
 
+// just use for inspiration, dont create dbadapter
+
 
 // one for raw tx data for
 // btc

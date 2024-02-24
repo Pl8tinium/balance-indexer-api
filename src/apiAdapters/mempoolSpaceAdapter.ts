@@ -2,6 +2,8 @@ import axios from "axios";
 import { IExplorerDataSupplicant } from "../interfaces/IExplorerDataSupplicant";
 import { Collection } from "mongodb";
 import { Transaction } from '../models/Transaction';
+import { IndexService } from '../indexService';
+import { IndexedAccount } from '../models/IndexedAccount';
 
 // this adapter fetches btc data
 export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
@@ -40,16 +42,13 @@ export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
     return allData;
   }
 
-    async verifyFullState(): Promise<string[]> {
+    async verifyFullState(indexedAccounts: Array<IndexedAccount>): Promise<string[]> {
         const hardcodedAddresses = ['bc1q5kvdu35dhjgm0v5zp8vgeq0ysr8ql4enusejpa'];
-        const addresses = hardcodedAddresses;
-
-
-        // get indexed accounts
 
         const addressesToUpdate: string[] = [];
 
-        for (let address in addresses) {
+        // for (let indexedAccount in indexedAccounts)
+        for (let address in hardcodedAddresses) {
             // get the latest tx from the api and check if it exists in the db
             const latestTxs = await this.fetchAllData(address);
             const latestTxid = latestTxs[0].txid;

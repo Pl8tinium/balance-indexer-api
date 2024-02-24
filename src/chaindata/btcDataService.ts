@@ -23,6 +23,10 @@ export class BtcDataService implements IDataService {
         this.apiAdapter = apiAdapter
         this.indexService = indexService
     }
+
+    //pla: index accounts when these methods are queried?
+
+
     async getTransaction(txId: string): Promise<Transaction | null> {
         return await this.btcRawData.findOne({txIds: txId}) as Transaction | null;
     }
