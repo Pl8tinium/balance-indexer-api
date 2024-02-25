@@ -2,31 +2,40 @@ import { IDataAggregator } from "./interfaces/IDataAggregator";
 import { Collection } from 'mongodb';
 import { Transaction } from "./models/Transaction";
 import { IDataService } from './interfaces/IDataService';
+import { DbAdapter } from "./dbAdapter";
+import Big from "big.js";
+import { IndexService } from "./indexService";
+import { IndexedAccount } from "./models/IndexedAccount";
+import { AggregatedAccountBalanceDay } from "./models/AggregatedAccountBalanceDay";
 
 export class DataAggregator implements IDataAggregator {
+    dbAdapter: DbAdapter;
+    indexService: IndexService;
 
-    constructor() {
+    constructor(dbAdapter: DbAdapter, indexService: IndexService) {
+        this.dbAdapter = dbAdapter;
+        this.indexService = indexService;
     }
-    getAbsoluteBalanceDifferenceForTxs(transactions: Array<Transaction>): Promise<number> {
-        // throw new Error("Method not implemented.");
 
-        // use already existing script from tmp
-
-
-
-        let currentBalance = new Big(initialBalanceSatoshi)//.div(satoshiPerBitcoin); // Convert initial balance to Bitcoin
-        const balances = new Map<string, Big>();
+    public calculateAbsoluteBalanceForTxs(day: Date, address: string, transactions: Array<Transaction>, previousBalance: number): AggregatedAccountBalanceDay {
+        let currentBalance = new Big(0);
 
         transactions.forEach(tx => {
-            const date = tx.confirmed.split('T')[0]; // Extract the date part
-            const fee = new Big(tx.fees)//.div(satoshiPerBitcoin); // Convert fee to Bitcoin
+            let fee = tx.fees ? new Big(tx.fees) : new Big(0);
             let netValue = new Big(0);
 
-            // Determine if the address is the sender
-            const isSender = tx.inputs.some(input => input.addresses.includes(address));
+            // Determine if the address is the sender and subtract the sent amount from the balance
+            let isSender = false;
+            tx.inputs.forEach(input => {
+                if (input.address == address) {
+                    netValue = netValue.minus(new Big(input.value))
+                    isSender = true;
+                }
+            });
 
+            // Add the received amount to the balance
             tx.outputs.forEach(output => {
-                if (output.addresses.includes(address)) {
+                if (output.address == address) {
                     netValue = netValue.plus(new Big(output.value))
                 }
             });
@@ -38,40 +47,84 @@ export class DataAggregator implements IDataAggregator {
 
             // Update the balance for this transaction
             currentBalance = currentBalance.plus(netValue);
-            balances.set(date, new Big(currentBalance));
         });
 
-        // Optional: Sort by date if needed
-        return new Map([...balances.entries()].sort());
+        return {
+            address: address,
+            date: day,
+            netBalance: previousBalance + currentBalance.toNumber(),
+            balanceDifference: currentBalance.toNumber()
+        } as AggregatedAccountBalanceDay;
 
+        // pla: note, maybe directly save Big objects in the db, currently doesnt have any benefit
     }
-    getAbsoluteBalanceDifference(dataService: IDataService, startDate: Date, endDate: Date, address: string, coin: string): Promise<number> {
-        
-        const transactions = dataService.getAccountHistory(address);
-        // get all days between start and end date in a for loop
 
+    public async getAggregatedHistory(startDate: Date, endDate: Date, address: string, coin: string): Promise<Array<AggregatedAccountBalanceDay>> {
+        const aggregatedData = this.dbAdapter.getAggregatedCollection(coin);
 
-        for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
-
-            
-            // check if the balance for this day is already in db, if not calculate it and put into db
-
+        const query = {
+            address: address,
+            date: {
+                $gte: startDate,
+                $lt: endDate
+            }
         }
+        const aggregatedDays = await aggregatedData.find(query).toArray() as Array<AggregatedAccountBalanceDay>;
 
-
-        // iterate over all days and get the balance difference for each day
-
-        // while doing so check if you got the aggregated balance for each of the days already in db, if not calc and put into db
-
-
-
-
-
-
-        // notes, only aggregate if the day already passed
-
-
-        throw new Error("Method not implemented.");
+        return aggregatedDays;
     }
 
+    private getDay(date: Date): Date {
+        const day = new Date(date);
+        // Set the time to 00:00:00.000, so the date can be compared on daily basis
+        day.setHours(0, 0, 0, 0);
+        return day;
+    }
+
+    public async aggregateDataByDay(accountsToAggregate: Array<IndexedAccount>, coin: string): Promise<void> {
+        const aggregatedData = this.dbAdapter.getAggregatedCollection(coin);
+        const rawData = this.dbAdapter.getRawCollection(coin);
+
+        for (let account of accountsToAggregate) {
+            let transactions = await rawData.find({ id: { $in: account.txIds } }).toArray() as Array<Transaction>;
+
+            // throw out transactions that are on the current day, we only aggregate past data for simplicity
+            transactions = transactions.filter(tx => new Date(tx.timestamp) < new Date());
+
+            // get transactions that were not part of the aggregation yet from the previous run where we ignored the current day
+            if (account.lastUpdated) {
+                const query = {
+                    address: account.address,
+                    timestamp: {
+                        $gte: this.getDay(account.lastUpdated),
+                        $lt: this.getDay(new Date(account.lastUpdated.getTime() + (24 * 60 * 60 * 1000))) // adds one day to lastUpdated
+                    }
+                }
+                const additionalTx = await rawData.find(query).toArray() as Array<Transaction>;
+
+                transactions = transactions.concat(additionalTx);
+            }
+
+            const groupedByDate = transactions.reduce((accumulator, tx) => {
+                const dateKey = this.getDay(tx.timestamp).toISOString();
+                accumulator[dateKey] = accumulator[dateKey] || [];
+                accumulator[dateKey].push(tx);
+
+                return accumulator;
+            }, {} as { [key: string]: Array<Transaction> });
+
+            // get the last aggregated balance for this account and use it as the starting point for the consecutive aggregated days
+            const lastAggregatedBalance = await aggregatedData.findOne({ address: account.address }, { sort: { date: -1 } });
+            let previousBalance = 0;
+            if (lastAggregatedBalance) {
+                previousBalance = lastAggregatedBalance.netBalance;
+            }
+
+            for (let date in groupedByDate) {
+                const aggregatedTxForDay = this.calculateAbsoluteBalanceForTxs(new Date(date), account.address, groupedByDate[date], previousBalance);
+                previousBalance = aggregatedTxForDay.netBalance;
+                aggregatedData.insertOne(aggregatedTxForDay);
+            }
+        }
+    }
 }

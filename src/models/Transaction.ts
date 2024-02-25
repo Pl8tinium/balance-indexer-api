@@ -5,7 +5,7 @@ export interface Transaction {
     fees?: number;
     confirmed: string;
     blockHeight: number;
-    timestamp: number;
+    timestamp: Date;
     inputs: Array<TransactionTransfer>;
     outputs: Array<TransactionTransfer>;
     additionalData?: any;

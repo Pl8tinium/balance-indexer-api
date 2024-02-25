@@ -1,27 +1,77 @@
-// databases
+import { Collection, MongoClient } from "mongodb"
+import { IndexedAccount } from "./models/IndexedAccount"
+import { AggregatedAccountBalanceDay } from "./models/AggregatedAccountBalanceDay"
+import { AddressLink } from "./models/AddressLink";
+import { Transaction } from "./models/Transaction";
 
-// just use for inspiration, dont create dbadapter
+export class DbAdapter {
+    btcRawData: Collection<Transaction> = null!;
+    btcIndexData: Collection<IndexedAccount> = null!;
+    btcAggregatedData: Collection<AggregatedAccountBalanceDay> = null!;
+    hiveRawData: Collection<Transaction> = null!;
+    hiveIndexData: Collection<IndexedAccount> = null!;
+    hiveAggregatedData: Collection<AggregatedAccountBalanceDay> = null!;
+    vscRawData: Collection<Transaction> = null!;
+    vscIndexData: Collection<IndexedAccount> = null!;
+    vscAggregatedData: Collection<AggregatedAccountBalanceDay> = null!;
+    linkData: Collection<AddressLink> = null!;
 
+    public async start() {
+        const client = new MongoClient('mongodb://localhost:27017')
+        await client.connect();
+        const db = client.db('vsc-indexer')
+        this.btcRawData = db.collection('btcRawData');
+        this.btcIndexData = db.collection('btcIndexData');
+        this.btcAggregatedData = db.collection('btcAggregatedData');
+        this.hiveRawData = db.collection('hiveRawData');
+        this.hiveIndexData = db.collection('hiveIndexData');
+        this.hiveAggregatedData = db.collection('hiveAggregatedData');
+        this.vscRawData = db.collection('vscRawData');
+        this.vscIndexData = db.collection('vscIndexData');
+        this.vscAggregatedData = db.collection('vscAggregatedData');
+        this.linkData = db.collection('linkData');
+    }
 
-// one for raw tx data for
-// btc
-// hive
+    public getIndexCollection(coin: string): Collection<IndexedAccount> {
+        switch (coin) {
+            case "BTC":
+                return this.btcIndexData;
+            case "HIVE":
+                return this.hiveIndexData;
+            case "VSC":
+                return this.vscIndexData;
+            default:
+                throw new Error("Invalid coin");
+        }
+    }
 
-// one for aggregated data
-// btc
-// hive
+    public getRawCollection(coin: string): Collection<Transaction> {
+        switch (coin) {
+            case "BTC":
+                return this.btcRawData;
+            case "HIVE":
+                return this.hiveRawData;
+            case "VSC":
+                return this.vscRawData;
+            default:
+                throw new Error("Invalid coin");
+        }
+    }
 
-// one for indexed accounts for
-// btc
-// hive
+    public getAggregatedCollection(coin: string): Collection<AggregatedAccountBalanceDay> {
+        switch (coin) {
+            case "BTC":
+                return this.btcAggregatedData;
+            case "HIVE":
+                return this.hiveAggregatedData;
+            case "VSC":
+                return this.vscAggregatedData;
+            default:
+                throw new Error("Invalid coin");
+        }
+    }
 
-// one for relationships/ links between accounts
-
-
-
-
-// NOTE
-
-// create dbs at beginning
-
-// in classes try to find db via coin prefix, if doesnt exist throw
+    public getLinkCollection(): Collection<AddressLink> {
+        return this.linkData;
+    }
+}

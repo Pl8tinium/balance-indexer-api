@@ -1,19 +1,20 @@
-import { IndexedAccount } from "../models/IndexedAccount";
+import { AccountTxMap, IndexedAccount } from "../models/IndexedAccount";
 
 export interface IExplorerDataSupplicant {
     /**
      * go through supplied (indexed) accounts and check if the database state correctly indexes the latest txs
-     * @returns {Array<string>} account addresses that are not up to date
+     * @param {Array<IndexedAccount>} indexedAccounts
+     * @returns {Array<IndexedAccount>} accounts that are not up to date
      */
-    verifyFullState(indexedAccounts: Array<IndexedAccount>): Promise<Array<string>>;
+    verifyFullState(indexedAccounts: Array<IndexedAccount>): Promise<Array<IndexedAccount>>;
 
     /**
      * go through supplied accounts and update the database state to the latest txs
      * 
-     * @param {Array<string>} addresses
-     * @returns {Promise<void>}
+     * @param {Array<IndexedAccount>} indexedAccounts
+     * @returns {Promise<Array<IndexedAccount>>} the new transactions of the updated accounts, warning: its only partial data of the database
      */
-    updateState(addresses: Array<string>): Promise<void>;
+    updateState(indexedAccounts: Array<IndexedAccount>): Promise<Array<IndexedAccount>>;
     
     coin: string;
 

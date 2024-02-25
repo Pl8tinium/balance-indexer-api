@@ -1,37 +1,16 @@
 import { Collection } from "mongodb";
 import { IndexedAccount } from "./models/IndexedAccount";
+import { DbAdapter } from "./dbAdapter";
 
 export class IndexService {
-    btcIndexData: Collection<IndexedAccount>
-    hiveIndexData: Collection<IndexedAccount>
-    vscindexData: Collection<IndexedAccount>
+    dbAdapter: DbAdapter;
 
-    constructor(
-        btcIndexData: Collection<IndexedAccount>,
-        hiveIndexData: Collection<IndexedAccount>,
-        vscIndexData: Collection<IndexedAccount>,
-    ) {
-        this.btcIndexData = btcIndexData;
-        this.hiveIndexData = hiveIndexData;
-        this.vscindexData = vscIndexData;
-    }
-
-
-    private getCollection(coin: string): Collection<IndexedAccount> {
-        switch (coin) {
-            case "BTC":
-                return this.btcIndexData;
-            case "HIVE":
-                return this.hiveIndexData;
-            case "VSC":
-                return this.vscindexData;
-            default:
-                throw new Error("Invalid coin");
-        }
+    constructor(dbAdapter: DbAdapter) {
+        this.dbAdapter = dbAdapter;
     }
 
     public async getIndexedAccounts(coin: string): Promise<Array<IndexedAccount>> {
-        const collection = this.getCollection(coin);
+        const collection = this.dbAdapter.getIndexCollection(coin);
         return collection.find({}).toArray();
     }
 
@@ -41,7 +20,26 @@ export class IndexService {
             $setOnInsert: { address: address, txIds: [] } as IndexedAccount
         };
         const options = { upsert: true };
-        const collection = this.getCollection(coin);
+        const collection = this.dbAdapter.getIndexCollection(coin);
         await collection.updateOne(query, update, options);
+    }
+
+    public async updateIndexedAccounts(accountsToUpdate: Array<IndexedAccount>, coin: string): Promise<void> {
+        const collection = this.dbAdapter.getIndexCollection(coin);
+        const bulk = collection.initializeUnorderedBulkOp();
+        accountsToUpdate.forEach(account => {
+            bulk.find({ address: account.address }).upsert().updateOne(
+                {
+                    $addToSet: {
+                        txIds: {
+                            $each: account.txIds
+                        }
+                    },
+                    $set: {
+                        lastUpdated: new Date()
+                    }
+                });
+        });
+        await bulk.execute();
     }
 }

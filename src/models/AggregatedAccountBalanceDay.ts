@@ -1,5 +1,6 @@
 export interface AggregatedAccountBalanceDay {
+    address: string;
     date: Date;
-    balance: number;
+    netBalance: number;
     balanceDifference: number;
 }
