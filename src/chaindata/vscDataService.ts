@@ -1,5 +1,3 @@
 //
 
-export class VscData {
-
-}
+export class VscData {}

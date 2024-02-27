@@ -1,24 +1,23 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "type": "pwa-node",
-        "request": "launch",
-        "name": "Debug with Nodemon",
-        "runtimeExecutable": "npm",
-        "runtimeArgs": ["run", "start"],
-        "port": 9229,
-        "timeout": 20000,
-        "restart": true,
-        "console": "integratedTerminal",
-        "internalConsoleOptions": "neverOpen",
-        "skipFiles": ["<node_internals>/**"],
-        "protocol": "inspector",
-        "env": {
-          "NODE_ENV": "development"
-        },
-        "sourceMaps": true
-      }
-    ]
-  }
-  
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Debug with Nodemon",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "port": 9229,
+      "timeout": 20000,
+      "restart": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "protocol": "inspector",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "sourceMaps": true
+    }
+  ]
+}

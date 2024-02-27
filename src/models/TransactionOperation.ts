@@ -1,4 +1,4 @@
 export interface TransactionTransfer {
-    address: string;
-    value: number;
+  address: string;
+  value: number;
 }

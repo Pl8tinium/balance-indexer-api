@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es6", // Set the JavaScript version for output files
-    "module": "commonjs", // Set the module system
+    "target": "es2020", // Set the JavaScript version for output files
+    "module": "es2020", // Set the module system
+    "moduleResolution": "node", // Set the module resolution strategy
     "outDir": "./dist", // Set the directory for compiled JavaScript files
     "rootDir": "./src", // Set the root directory for TypeScript files
     "strict": true, // Enable all strict type-checking options
-    "esModuleInterop": true, // Enable compatibility with Babel-imported modules
+    "esModuleInterop": true // Enable compatibility with Babel-imported modules
   }
 }

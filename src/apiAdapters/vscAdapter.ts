@@ -1,1 +1,3 @@
-// To be implemented
+// class VscAdapter extends ExplorerDataSupplicant implements IExplorerDataSupplicant {
+
+// }

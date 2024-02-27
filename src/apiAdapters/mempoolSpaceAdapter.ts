@@ -1,34 +1,49 @@
-import axios from "axios";
-import { IExplorerDataSupplicant } from "../interfaces/IExplorerDataSupplicant";
-import { Collection } from "mongodb";
+import axios from 'axios';
+import { IExplorerDataSupplicant } from '../interfaces/IExplorerDataSupplicant';
+import { Collection } from 'mongodb';
 import { Transaction } from '../models/Transaction';
 import { IndexService } from '../indexService';
-import { AccountTxMap, IndexedAccount } from '../models/IndexedAccount';
+import { IndexedAccount } from '../models/IndexedAccount';
+import EventEmitter from 'events';
+import { ExplorerDataSupplicant } from './explorerDataSupplicant';
+import { DbAdapter } from '../dbAdapter';
+import { TransactionTransfer } from '../models/TransactionOperation';
 
 // this adapter fetches btc data
-export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
-  coin: string = 'btc';
-  btcRawData: Collection<Transaction>;
+export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExplorerDataSupplicant {
+  public coin: string = 'BTC';
+  private btcRawData: Collection<Transaction>;
 
-  constructor(btcRawData: Collection<Transaction>) {
+  constructor(btcRawData: Collection<Transaction>, indexService: IndexService) {
+    super(indexService);
     this.btcRawData = btcRawData;
+  }
+
+  async getTxCount(walletAddress: string): Promise<number> {
+    try {
+      const response = await axios.get(`https://mempool.space/api/address/${walletAddress}`);
+      return response.data.chain_stats.tx_count;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      throw error; // Optionally re-throw or handle the error differently
+    }
   }
 
   // Function to recursively fetch all pages of data
   async fetchAllData(walletAddress: string, txToStartFrom: string = ''): Promise<any[]> {
-    const limit = 25; // max number of items a request may contain, specified by the api
+    const limit = 50; // max number of items a request may contain, specified by the api
     let allData: any[] = [];
     let moreDataAvailable = true;
     let lastTxId = txToStartFrom || '';
 
     while (moreDataAvailable) {
       try {
-        const response = await axios.get(`https://mempool.space/api/address/${walletAddress}/txs&after_txid=${lastTxId}`);
+        const response = await axios.get(`https://mempool.space/api/address/${walletAddress}/txs?after_txid=${lastTxId}`);
         const newData = response.data;
-        allData = allData.concat(newData.data); // Assuming the data is in the `data` field
+        allData = allData.concat(newData);
 
         // Check if we received fewer items than we requested, indicating we've reached the end
-        if (newData.data.length < limit) {
+        if (newData.length < limit) {
           moreDataAvailable = false;
         } else {
           lastTxId = newData[newData.length - 1].txid;
@@ -45,14 +60,11 @@ export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
   async verifyFullState(indexedAccounts: Array<IndexedAccount>): Promise<Array<IndexedAccount>> {
     const addressesToUpdate: Array<IndexedAccount> = [];
 
-    for (let indexedAccount of indexedAccounts) {
-      // get the latest tx from the api and check if it exists in the db
-      const latestTxs = await this.fetchAllData(indexedAccount.address);
-      const latestTxid = latestTxs[0].txid;
-      const result = this.btcRawData.findOne({ txid: latestTxid });
+    for (const indexedAccount of indexedAccounts) {
+      const txCount = await this.getTxCount(indexedAccount.address);
 
       // if it doesnt exist the address needs to be updated
-      if (result === null) {
+      if (indexedAccount.txIds.length < txCount) {
         addressesToUpdate.push(indexedAccount);
       }
     }
@@ -60,11 +72,37 @@ export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
     return addressesToUpdate;
   }
 
+  parseToTransaction(responseObj: any): Transaction {
+    const data = responseObj;
+  
+    const transaction: Transaction = {
+      id: data.txid,
+      fees: data.fee,
+      confirmed: data.status.confirmed,
+      blockHeight: data.status.block_height,
+      timestamp: new Date(data.status.block_time * 1000), // Convert Unix timestamp to Date
+      inputs: data.vin.map((input: any) => ({
+        address: input.prevout.scriptpubkey_address,
+        value: input.prevout.value,
+      } as TransactionTransfer)),
+      outputs: data.vout.map((output: any) => ({
+        address: output.scriptpubkey_address,
+        value: output.value,
+      } as TransactionTransfer)),
+      // additionalData: { size: data.size, weight: data.weight, sigops: data.sigops },
+    };
+  
+    return transaction;
+  }
+
   async updateState(indexedAccounts: Array<IndexedAccount>): Promise<Array<IndexedAccount>> {
     const updatedAccounts: Array<IndexedAccount> = [];
 
-    for (let indexedAccount of indexedAccounts) {
-      const latestTx = await this.btcRawData.find({ address: indexedAccount.address }, { sort: { timestamp: -1 } }).limit(1).toArray();
+    for (const indexedAccount of indexedAccounts) {
+      const latestTx = await this.btcRawData
+        .find({ address: indexedAccount.address }, { sort: { timestamp: -1 } })
+        .limit(1)
+        .toArray();
 
       let txToStartFrom = '';
       if (latestTx != null && latestTx.length > 0) {
@@ -72,9 +110,14 @@ export class MempoolSpaceAdapter implements IExplorerDataSupplicant {
       }
 
       const newTxs = await this.fetchAllData(indexedAccount.address, txToStartFrom);
-      this.btcRawData.insertMany(newTxs);
+      const parsedTxs = newTxs.map(this.parseToTransaction);
+      await this.btcRawData.insertMany(parsedTxs);
 
-      updatedAccounts.push({ address: indexedAccount.address, txIds: newTxs.map(tx => tx.txid), lastUpdated: indexedAccount.lastUpdated} as IndexedAccount);
+      updatedAccounts.push({
+        address: indexedAccount.address,
+        txIds: newTxs.map(tx => tx.txid),
+        lastUpdated: indexedAccount.lastUpdated,
+      } as IndexedAccount);
     }
 
     return updatedAccounts;
