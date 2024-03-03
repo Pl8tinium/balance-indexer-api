@@ -74,24 +74,30 @@ export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExpl
 
   parseToTransaction(responseObj: any): Transaction {
     const data = responseObj;
-  
+
     const transaction: Transaction = {
       id: data.txid,
       fees: data.fee,
       confirmed: data.status.confirmed,
       blockHeight: data.status.block_height,
       timestamp: new Date(data.status.block_time * 1000), // Convert Unix timestamp to Date
-      inputs: data.vin.map((input: any) => ({
-        address: input.prevout.scriptpubkey_address,
-        value: input.prevout.value,
-      } as TransactionTransfer)),
-      outputs: data.vout.map((output: any) => ({
-        address: output.scriptpubkey_address,
-        value: output.value,
-      } as TransactionTransfer)),
+      inputs: data.vin.map(
+        (input: any) =>
+          ({
+            address: input.prevout.scriptpubkey_address,
+            value: input.prevout.value,
+          }) as TransactionTransfer
+      ),
+      outputs: data.vout.map(
+        (output: any) =>
+          ({
+            address: output.scriptpubkey_address,
+            value: output.value,
+          }) as TransactionTransfer
+      ),
       // additionalData: { size: data.size, weight: data.weight, sigops: data.sigops },
     };
-  
+
     return transaction;
   }
 

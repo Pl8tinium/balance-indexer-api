@@ -1,4 +1,3 @@
-
 import { AggregatedAccountBalanceDay } from '../models/AggregatedAccountBalanceDay';
 import { Transaction } from '../models/Transaction';
 

@@ -29,7 +29,8 @@ export class BtcDataService implements IDataService {
     this.dataAggregator = dataAggregator;
 
     this.apiAdapter.transactionOutput.on('newTransactions', async (newTransactions: Array<IndexedAccount>) => {
-      await this.dataAggregator.aggregateDataByDay(newTransactions, this.apiAdapter.coin);
+      // pla: includeFees = false for BTC data aggegration, because the fee is included in the input transaction value
+      await this.dataAggregator.aggregateDataByDay(newTransactions, this.apiAdapter.coin, false);
       await this.indexService.updateIndexedAccounts(newTransactions, this.apiAdapter.coin);
     });
 

@@ -21,12 +21,13 @@ export class DataAggregator implements IDataAggregator {
     day: Date,
     address: string,
     transactions: Array<Transaction>,
-    previousBalance: number
+    previousBalance: number,
+    includeFees: boolean
   ): AggregatedAccountBalanceDay {
     let currentBalance = new Big(0);
 
     transactions.forEach(tx => {
-      const fee = tx.fees ? new Big(tx.fees) : new Big(0);
+      const fee = includeFees && tx.fees ? new Big(tx.fees) : new Big(0);
       let netValue = new Big(0);
 
       // Determine if the address is the sender and subtract the sent amount from the balance
@@ -86,7 +87,7 @@ export class DataAggregator implements IDataAggregator {
     return day;
   }
 
-  public async aggregateDataByDay(accountsToAggregate: Array<IndexedAccount>, coin: string): Promise<void> {
+  public async aggregateDataByDay(accountsToAggregate: Array<IndexedAccount>, coin: string, includeFees: boolean = true): Promise<void> {
     const aggregatedData = this.dbAdapter.getAggregatedCollection(coin);
     const rawData = this.dbAdapter.getRawCollection(coin);
 
@@ -110,7 +111,8 @@ export class DataAggregator implements IDataAggregator {
         transactions = transactions.concat(additionalTx);
       }
 
-      const groupedByDate = transactions.reduce(
+      // group and sort by date
+      const groupedByDateObject = transactions.reduce(
         (accumulator, tx) => {
           const dateKey = this.getDay(tx.timestamp).toISOString();
           accumulator[dateKey] = accumulator[dateKey] || [];
@@ -120,6 +122,8 @@ export class DataAggregator implements IDataAggregator {
         },
         {} as { [key: string]: Array<Transaction> }
       );
+      const groupedByDateArray = Object.entries(groupedByDateObject);
+      groupedByDateArray.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
 
       // get the last aggregated balance for this account and use it as the starting point for the consecutive aggregated days
       const lastAggregatedBalance = await aggregatedData.findOne({ address: account.address }, { sort: { date: -1 } });
@@ -128,10 +132,10 @@ export class DataAggregator implements IDataAggregator {
         previousBalance = lastAggregatedBalance.netBalance;
       }
 
-      for (const date in groupedByDate) {
-        const aggregatedTxForDay = this.calculateAbsoluteBalanceForTxs(new Date(date), account.address, groupedByDate[date], previousBalance);
+      for (const [date, transactions] of groupedByDateArray) {
+        const aggregatedTxForDay = this.calculateAbsoluteBalanceForTxs(new Date(date), account.address, transactions, previousBalance, includeFees);
         previousBalance = aggregatedTxForDay.netBalance;
-        aggregatedData.insertOne(aggregatedTxForDay);
+        await aggregatedData.insertOne(aggregatedTxForDay);
       }
     }
   }
