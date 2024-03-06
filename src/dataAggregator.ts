@@ -92,7 +92,7 @@ export class DataAggregator implements IDataAggregator {
     const rawData = this.dbAdapter.getRawCollection(coin);
 
     for (const account of accountsToAggregate) {
-      let transactions = (await rawData.find({ id: { $in: account.txIds } }).toArray()) as Array<Transaction>;
+      let transactions = (await rawData.find({ id: { $in: account.txIds }, aggregatable: true }).toArray()) as Array<Transaction>;
 
       // throw out transactions that are on the current day, we only aggregate past data for simplicity
       transactions = transactions.filter(tx => new Date(tx.timestamp) < new Date());

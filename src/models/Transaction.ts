@@ -9,4 +9,5 @@ export interface Transaction {
   inputs: Array<TransactionTransfer>;
   outputs: Array<TransactionTransfer>;
   additionalData?: any;
+  aggregatable: boolean;
 }

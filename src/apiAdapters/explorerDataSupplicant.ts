@@ -8,8 +8,8 @@ export abstract class ExplorerDataSupplicant implements IExplorerDataSupplicant 
   abstract coin: string;
   public transactionOutput: EventEmitter;
   protected cycleTime = 15 * 60 * 1000;
+  protected indexService: IndexService;
   private checkInterval: NodeJS.Timeout = null!;
-  private indexService: IndexService;
 
   constructor(indexService: IndexService) {
     this.indexService = indexService;

@@ -30,7 +30,7 @@ export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExpl
   }
 
   // Function to recursively fetch all pages of data
-  async fetchAllData(walletAddress: string, txToStartFrom: string = ''): Promise<any[]> {
+  async fetchTransactions(walletAddress: string, txToStartFrom: string = ''): Promise<any[]> {
     const limit = 50; // max number of items a request may contain, specified by the api
     let allData: any[] = [];
     let moreDataAvailable = true;
@@ -86,6 +86,7 @@ export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExpl
           ({
             address: input.prevout.scriptpubkey_address,
             value: input.prevout.value,
+            currency: 'BTC'
           }) as TransactionTransfer
       ),
       outputs: data.vout.map(
@@ -93,8 +94,10 @@ export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExpl
           ({
             address: output.scriptpubkey_address,
             value: output.value,
+            currency: 'BTC'
           }) as TransactionTransfer
       ),
+      aggregatable: true,
       // additionalData: { size: data.size, weight: data.weight, sigops: data.sigops },
     };
 
@@ -115,7 +118,7 @@ export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExpl
         txToStartFrom = latestTx[0].id;
       }
 
-      const newTxs = await this.fetchAllData(indexedAccount.address, txToStartFrom);
+      const newTxs = await this.fetchTransactions(indexedAccount.address, txToStartFrom);
       const parsedTxs = newTxs.map(this.parseToTransaction);
       await this.btcRawData.insertMany(parsedTxs);
 

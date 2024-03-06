@@ -44,4 +44,17 @@ export class IndexService {
     });
     await bulk.execute();
   }
+
+  public async getTransactionCount(address: string, coin: string): Promise<number> {
+    const collection = this.dbAdapter.getIndexCollection(coin);
+    const account = await collection.findOne({ address: address });
+
+    return account ? account.txIds.length : 0;
+  }
+
+  public async isTransactionIndexed(address: string, txId: string, coin: string): Promise<boolean> {
+    const collection = this.dbAdapter.getIndexCollection(coin);
+    const account = await collection.findOne({ address: address, txIds: { $in: [txId] } });
+    return !!account;
+  }
 }
