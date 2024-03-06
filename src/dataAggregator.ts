@@ -132,12 +132,18 @@ export class DataAggregator implements IDataAggregator {
         const netBalances = [];
         const balanceDifferences = [];
 
+        // get all unique currencies for this day
         const uniqueCurrencies = new Set<string>();
         for (let tx of transactions) {
           for (let input of tx.inputs) {
             uniqueCurrencies.add(input.currency);
           }
         }
+
+        // add all currencies from the last aggregated balance to the unique currencies
+        lastAggregatedBalance?.netBalances.forEach(balance => {
+          uniqueCurrencies.add(balance.currency);
+        });
 
         for (let currency of uniqueCurrencies) {
           // check if we can find a previous balance for this currency
