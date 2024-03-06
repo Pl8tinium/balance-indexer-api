@@ -3,13 +3,7 @@ import { IndexedAccount } from '../models/IndexedAccount';
 import { Transaction } from '../models/Transaction';
 
 export interface IDataAggregator {
-  calculateAbsoluteBalanceForTxs(
-    day: Date,
-    address: string,
-    transactions: Array<Transaction>,
-    previousBalance: number,
-    includeFees?: boolean
-  ): AggregatedAccountBalanceDay;
+  calculateAbsoluteBalanceForTxs(address: string, transactions: Array<Transaction>, currency: string, includeFees: boolean): number
   aggregateDataByDay(accountsToAggregate: Array<IndexedAccount>, coin: string, includeFees?: boolean): Promise<void>;
   getAggregatedHistory(startDate: Date, endDate: Date, address: string, coin: string): Promise<Array<AggregatedAccountBalanceDay>>;
 }

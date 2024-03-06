@@ -30,8 +30,8 @@ export class HiveDataService implements IDataService {
     this.dataAggregator = dataAggregator;
 
     this.apiAdapter.transactionOutput.on('newTransactions', async (newTransactions: Array<IndexedAccount>) => {
-        await this.dataAggregator.aggregateDataByDay(newTransactions, this.apiAdapter.coin, false);
-        await this.indexService.updateIndexedAccounts(newTransactions, this.apiAdapter.coin);
+      await this.dataAggregator.aggregateDataByDay(newTransactions, this.apiAdapter.coin, false);
+      await this.indexService.updateIndexedAccounts(newTransactions, this.apiAdapter.coin);
     });
 
     this.apiAdapter.start();

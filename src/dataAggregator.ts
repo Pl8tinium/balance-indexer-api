@@ -17,13 +17,7 @@ export class DataAggregator implements IDataAggregator {
     this.indexService = indexService;
   }
 
-  public calculateAbsoluteBalanceForTxs(
-    day: Date,
-    address: string,
-    transactions: Array<Transaction>,
-    previousBalance: number,
-    includeFees: boolean
-  ): AggregatedAccountBalanceDay {
+  public calculateAbsoluteBalanceForTxs(address: string, transactions: Array<Transaction>, currency: string, includeFees: boolean): number {
     let currentBalance = new Big(0);
 
     transactions.forEach(tx => {
@@ -55,12 +49,14 @@ export class DataAggregator implements IDataAggregator {
       currentBalance = currentBalance.plus(netValue);
     });
 
-    return {
-      address: address,
-      date: day,
-      netBalance: previousBalance + currentBalance.toNumber(),
-      balanceDifference: currentBalance.toNumber(),
-    } as AggregatedAccountBalanceDay;
+    return currentBalance.toNumber();
+
+    // return {
+    //   address: address,
+    //   date: day,
+    //   netBalance: previousBalance + currentBalance.toNumber(),
+    //   balanceDifference: currentBalance.toNumber(),
+    // } as AggregatedAccountBalanceDay;
 
     // pla: note, maybe directly save Big objects in the db, currently doesnt have any benefit
   }
@@ -126,16 +122,53 @@ export class DataAggregator implements IDataAggregator {
       groupedByDateArray.sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
 
       // get the last aggregated balance for this account and use it as the starting point for the consecutive aggregated days
-      const lastAggregatedBalance = await aggregatedData.findOne({ address: account.address }, { sort: { date: -1 } });
-      let previousBalance = 0;
-      if (lastAggregatedBalance) {
-        previousBalance = lastAggregatedBalance.netBalance;
-      }
+      let lastAggregatedBalance = (await aggregatedData.findOne(
+        { address: account.address },
+        { sort: { date: -1 } }
+      )) as AggregatedAccountBalanceDay | null;
 
+      // aggregate by currency
       for (const [date, transactions] of groupedByDateArray) {
-        const aggregatedTxForDay = this.calculateAbsoluteBalanceForTxs(new Date(date), account.address, transactions, previousBalance, includeFees);
-        previousBalance = aggregatedTxForDay.netBalance;
-        await aggregatedData.insertOne(aggregatedTxForDay);
+        const netBalances = [];
+        const balanceDifferences = [];
+
+        const uniqueCurrencies = new Set<string>();
+        for (let tx of transactions) {
+          for (let input of tx.inputs) {
+            uniqueCurrencies.add(input.currency);
+          }
+        }
+
+        for (let currency of uniqueCurrencies) {
+          // check if we can find a previous balance for this currency
+          let previousBalance = 0;
+          lastAggregatedBalance?.netBalances.forEach(balance => {
+            if (balance.currency == currency) {
+              previousBalance = balance.amount;
+            }
+          });
+
+          const aggregatedAmountForDay = this.calculateAbsoluteBalanceForTxs(account.address, transactions, currency, includeFees);
+
+          netBalances.push({
+            currency: currency,
+            amount: previousBalance + aggregatedAmountForDay,
+          });
+
+          balanceDifferences.push({
+            currency: currency,
+            amount: aggregatedAmountForDay,
+          });
+        }
+
+        lastAggregatedBalance = {
+          address: account.address,
+          date: new Date(date),
+          netBalances: netBalances,
+          balanceDifferences: balanceDifferences,
+        } as AggregatedAccountBalanceDay;
+
+        await aggregatedData.insertOne(lastAggregatedBalance);
       }
     }
   }

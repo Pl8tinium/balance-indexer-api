@@ -29,9 +29,6 @@ async function main() {
     indexService,
     dataAggregator
   );
-  
-
-
 
   // const hardcodedAddresses = ['bc1q5kvdu35dhjgm0v5zp8vgeq0ysr8ql4enusejpa'];
 

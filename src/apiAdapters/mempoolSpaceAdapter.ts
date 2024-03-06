@@ -86,7 +86,7 @@ export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExpl
           ({
             address: input.prevout.scriptpubkey_address,
             value: input.prevout.value,
-            currency: 'BTC'
+            currency: 'BTC',
           }) as TransactionTransfer
       ),
       outputs: data.vout.map(
@@ -94,7 +94,7 @@ export class MempoolSpaceAdapter extends ExplorerDataSupplicant implements IExpl
           ({
             address: output.scriptpubkey_address,
             value: output.value,
-            currency: 'BTC'
+            currency: 'BTC',
           }) as TransactionTransfer
       ),
       aggregatable: true,

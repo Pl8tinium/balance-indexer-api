@@ -29,17 +29,17 @@ export class HiveAdapter extends ExplorerDataSupplicant implements IExplorerData
     let moreDataAvailable = true;
 
     while (moreDataAvailable) {
-      try {        
+      try {
         const payload = {
           jsonrpc: '2.0',
           method: 'condenser_api.get_account_history',
           params: [username, txHeight, limit],
           id: 1,
-        };    
+        };
 
         const response = await axios.post(`https://api.hive.blog`, payload);
         const newData = response.data.result;
-        
+
         // get last fetched tx's height and check if its the same as the txHeight we requested, if not we reached the end of the tx history
         if (txHeight != -1 && newData[newData.length - 1][0] != txHeight) {
           moreDataAvailable = false;
@@ -50,7 +50,7 @@ export class HiveAdapter extends ExplorerDataSupplicant implements IExplorerData
         } else {
           allData = allData.concat(newData);
         }
-        
+
         // If user specified maximum number of transactions to fetch, check if we've reached that number
         if (maxFetch && allData.length >= maxFetch) {
           moreDataAvailable = false;
@@ -80,18 +80,19 @@ export class HiveAdapter extends ExplorerDataSupplicant implements IExplorerData
     return addressesToUpdate;
   }
 
-  splitHiveTransactionAmount(amount: string): { value: number; currency: string } {
+  splitHiveTransactionAmount(amount: string): any {
     const parts = amount.split(' ');
     if (parts.length !== 2) {
-        throw new Error('Invalid Hive transaction amount format');
+      throw new Error('Invalid Hive transaction amount format');
     }
     const value = parseFloat(parts[0]);
     if (isNaN(value)) {
-        throw new Error('Invalid numeric value in Hive transaction amount');
+      throw new Error('Invalid numeric value in Hive transaction amount');
     }
     const currency = parts[1];
+
     return { value, currency };
-}
+  }
 
   parseToTransaction(responseObj: any): Transaction {
     const data = responseObj[1];
@@ -118,8 +119,7 @@ export class HiveAdapter extends ExplorerDataSupplicant implements IExplorerData
         } as TransactionTransfer,
       ];
       aggregatable = true;
-    }
-    else if (data.op[0] == 'account_update') {
+    } else if (data.op[0] == 'account_update') {
       additionalData = data.op[1].json_metadata;
       inputs = [
         {
@@ -127,8 +127,7 @@ export class HiveAdapter extends ExplorerDataSupplicant implements IExplorerData
           value: 0,
         } as TransactionTransfer,
       ];
-    }
-    else {
+    } else {
       // pla: ... not sure if other operation's metadata is relevant
     }
 
@@ -154,7 +153,7 @@ export class HiveAdapter extends ExplorerDataSupplicant implements IExplorerData
       const txHeightToStartFrom = await this.indexService.getTransactionCount(indexedAccount.address, this.coin);
 
       const newTxs = await this.fetchTransactions(indexedAccount.address, txHeightToStartFrom, 100, undefined);
-      const parsedTxs = newTxs.map(this.parseToTransaction);
+      const parsedTxs = newTxs.map(tx => this.parseToTransaction(tx));
 
       await this.hiveRawData.insertMany(parsedTxs);
 
